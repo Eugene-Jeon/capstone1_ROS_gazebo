@@ -87,7 +87,7 @@ public:
    * @param rho     Distance resolution of the accumulator in pixels.
    * @param theta   Distance resolution of the accumulator in radians.
    */
-  void findLines(std::vector<cv::Vec2d>& lines, int threshold, double rho, double theta)
+  void findLines(std::vector<cv::Vec2f>& lines, int threshold, double rho, double theta)
   {
     const int IMAGE_WIDTH = 400;
     const int IMAGE_HEIGHT = 400;
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
   ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
   ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
 
-  std::vector<cv::Vec2d> lines;
+  std::vector<cv::Vec2f> lines;
   HoughLinesFinder houghLinesFinder;
 
   // Hough Transform parameters, which will be read from the ROS Parameter Server
