@@ -131,8 +131,14 @@ int main(int argc, char** argv)
   std::vector<cv::Vec2d> lines;
   HoughLinesFinder houghLinesFinder;
 
-  int houghThreshold = n.param("/data_show_node/hough_threshold", 7);
-  ROS_INFO("Using threshold = %d...\n", houghThreshold);
+  // Hough Transform parameters, which will be read from the ROS Parameter Server
+  int threshold;
+  double rho;
+  double theta_degree;
+  ros::param::param("~threshold", threshold, 10);
+  ros::param::param("~rho", rho, 1.0);
+  ros::param::param("~theta_degree", theta_degree, 1.0);
+  ROS_INFO("Using threshold = %d, rho = %f (pixels), theta = %f (degrees)...\n", threshold, rho, theta_degree);
 
   while (ros::ok())
   {
@@ -177,7 +183,7 @@ int main(int argc, char** argv)
     cv::circle(map, cv::Point(MAP_WIDTH / 2, MAP_HEIGHT / 2), 3, cv::Scalar(255, 0, 0), -1);
 
     // Find lines using Hough Transform
-    houghLinesFinder.findLines(lines, houghThreshold, 1, CV_PI / 180);
+    houghLinesFinder.findLines(lines, threshold, rho, theta_degree * CV_PI / 180);
 
     // Draw the lines found with Hough Transform
     for (size_t i = 0; i < lines.size(); i++)
