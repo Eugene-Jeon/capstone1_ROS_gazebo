@@ -75,37 +75,50 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
   map_mutex.unlock();
 }
 
-void lidarToHoughLines(std::vector<cv::Vec2d>& lines, cv::Mat& image, int threshold)
+/** Class for detecting lines in LIDAR data using Hough Transform. */
+class HoughLinesFinder
 {
-  const int IMAGE_WIDTH = 400;
-  const int IMAGE_HEIGHT = 400;
-  const double MAP_RESOL = 0.015;
-
-  // Fill the matrix with zeros
-  image = cv::Mat::zeros(IMAGE_WIDTH, IMAGE_HEIGHT, CV_8UC1);
-
-  // Create a rect for checking points
-  const cv::Rect imageRect(cv::Point(), image.size());
-
-  // Build a binary (black-and-white) image from LIDAR data
-  int cx, cy;
-  int cx1, cx2, cy1, cy2;
-  for (int i = 0; i < lidar_size; i++)
+public:
+  /**
+   * Applies Standard Hough Line Transform to an image to detect lines.
+   * @param lines   Output vector of lines. Each element is a pair of (rho, theta) of the line.
+   * @param image   Image of points to analyze.
+   * @param threshold   Accumulator threshold (minimum vote).
+   * @param rho     Distance resolution of the accumulator in pixels.
+   * @param theta   Distance resolution of the accumulator in radians.
+   */
+  void findLines(std::vector<cv::Vec2d>& lines, int threshold, double rho, double theta)
   {
-    float obstacle_x = lidar_distance[i] * cos(lidar_degree[i]);
-    float obstacle_y = lidar_distance[i] * sin(lidar_degree[i]);
-    int cx = IMAGE_WIDTH / 2 + static_cast<int>(obstacle_y / MAP_RESOL);
-    int cy = IMAGE_HEIGHT / 2 + static_cast<int>(obstacle_x / MAP_RESOL);
+    const int IMAGE_WIDTH = 400;
+    const int IMAGE_HEIGHT = 400;
+    const float MAP_RESOLUTION = 0.015;  // Map resolution (unit: meters/pixel)
 
-    if (imageRect.contains({ cx, cy }))
+    // Fill the matrix with zeros
+    image_ = cv::Mat::zeros(IMAGE_WIDTH, IMAGE_HEIGHT, CV_8UC1);
+
+    // Create a rect for checking if a point lies within the image bounds
+    const cv::Rect imageRect(cv::Point(), image_.size());
+
+    // Build a binary (black-and-white) image from LIDAR data
+    for (int i = 0; i < lidar_size; i++)
     {
-      image.at<int>(cx, cy) = 255;
+      float obstacle_x = lidar_distance[i] * cos(lidar_degree[i]);
+      float obstacle_y = lidar_distance[i] * sin(lidar_degree[i]);
+      int cx = IMAGE_WIDTH / 2 + static_cast<int>(obstacle_y / MAP_RESOLUTION);
+      int cy = IMAGE_HEIGHT / 2 + static_cast<int>(obstacle_x / MAP_RESOLUTION);
+
+      if (imageRect.contains({ cx, cy }))
+        image_.at<int>(cx, cy) = 255;
     }
+
+    // Standard Hough Line Transform
+    cv::HoughLines(image_, lines, rho, theta, threshold, 0, 0);
   }
 
-  // Standard Hough Line Transform
-  cv::HoughLines(image, lines, 4, 4 * CV_PI / 180, threshold, 0, 0);
-}
+private:
+  /** Matrix to use when converting LIDAR data to a 2D image, which is needed for Hough Transform. */
+  cv::Mat image_;
+};
 
 int main(int argc, char** argv)
 {
@@ -116,7 +129,7 @@ int main(int argc, char** argv)
   ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
 
   std::vector<cv::Vec2d> lines;
-  cv::Mat lidarImage;
+  HoughLinesFinder houghLinesFinder;
 
   int houghThreshold = n.param("/data_show_node/hough_threshold", 7);
   ROS_INFO("Using threshold = %d...\n", houghThreshold);
@@ -164,7 +177,8 @@ int main(int argc, char** argv)
     cv::circle(map, cv::Point(MAP_WIDTH / 2, MAP_HEIGHT / 2), 3, cv::Scalar(255, 0, 0), -1);
 
     // Find lines using Hough Transform
-    lidarToHoughLines(lines, lidarImage, houghThreshold);
+    houghLinesFinder.findLines(lines, houghThreshold, 1, CV_PI / 180);
+
     // Draw the lines found with Hough Transform
     for (size_t i = 0; i < lines.size(); i++)
     {
