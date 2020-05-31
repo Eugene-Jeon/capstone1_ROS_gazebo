@@ -87,7 +87,7 @@ int main(int argc, char** argv)
   ros::Publisher pub_right_wheel =
       n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
 
-  while (ros::ok)
+  while (ros::ok())
   {
     std_msgs::Float64 left_wheel_msg;
     std_msgs::Float64 right_wheel_msg;
