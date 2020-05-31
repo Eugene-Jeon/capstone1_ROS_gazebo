@@ -120,6 +120,34 @@ private:
   cv::Mat image_;
 };
 
+/**
+ * Load Hough Transform parameters from the ROS Parameter Server.
+ * If any parameters have changed, log them.
+ */
+void updateHoughTransformParameters(int& threshold, double& rho, double& theta_degree)
+{
+  int new_threshold;
+  if (ros::param::get("~threshold", new_threshold) && new_threshold != threshold)
+  {
+    threshold = new_threshold;
+    ROS_INFO("Using threshold = %d\n", threshold);
+  }
+
+  double new_rho;
+  if (ros::param::get("~rho", new_rho) && new_rho != rho)
+  {
+    rho = new_rho;
+    ROS_INFO("Using rho = %f (pixels)\n", rho);
+  }
+
+  double new_theta_degree;
+  if (ros::param::get("~theta_degree", new_theta_degree) && new_theta_degree != theta_degree)
+  {
+    theta_degree = new_theta_degree;
+    ROS_INFO("Using theta = %f (degrees)\n", theta_degree);
+  }
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "data_show_node");
@@ -132,16 +160,17 @@ int main(int argc, char** argv)
   HoughLinesFinder houghLinesFinder;
 
   // Hough Transform parameters, which will be read from the ROS Parameter Server
-  int threshold;
-  double rho;
-  double theta_degree;
-  ros::param::param("~threshold", threshold, 10);
-  ros::param::param("~rho", rho, 1.0);
-  ros::param::param("~theta_degree", theta_degree, 1.0);
-  ROS_INFO("Using threshold = %d, rho = %f (pixels), theta = %f (degrees)...\n", threshold, rho, theta_degree);
+  int threshold = 10;
+  double rho = 1.0;
+  double theta_degree = 1.0;
+  ROS_INFO("Initial parameters: threshold = %d, rho = %f (pixels), theta = %f (degrees)\n", threshold, rho,
+           theta_degree);
 
   while (ros::ok())
   {
+    // Check if parameters have changed
+    updateHoughTransformParameters(threshold, rho, theta_degree);
+
     cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
     // Drawing Lidar data
     float obstacle_x, obstacle_y;
