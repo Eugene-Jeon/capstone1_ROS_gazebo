@@ -16,6 +16,7 @@
 #include "sensor_msgs/LaserScan.h"
 
 #include "opencv2/opencv.hpp"
+#include "simple_lidar_subscriber.h"
 
 float MAP_CX = 200.5;
 float MAP_CY = 200.5;
@@ -27,19 +28,11 @@ int OBSTACLE_PADDING = 2;       // Obstacle Size
 int OBSTACLE_CONNECT_MAX = 15;  // Range to connect obstacles
 
 int init_ball;
-int init_lidar;
-
-int lidar_size;
-float lidar_degree[400];
-float lidar_distance[400];
-
 int ball_number;
 float ball_X[20];
 float ball_Y[20];
 
 boost::mutex map_mutex;
-
-#define RAD2DEG(x) ((x)*180. / M_PI)
 
 bool check_point_range(int cx, int cy)
 {
@@ -60,27 +53,15 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
   }
   map_mutex.unlock();
 }
-void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
-{
-  map_mutex.lock();
-  int count = scan->angle_max / scan->angle_increment;
-  lidar_size = count;
-  for (int i = 0; i < count; i++)
-  {
-    lidar_degree[i] = scan->angle_min + scan->angle_increment * i;
-    lidar_distance[i] = scan->ranges[i];
-    // std::cout << "degree : "<< lidar_degree[i];
-    // std::cout << "   distance : "<< lidar_distance[i]<<std::endl;
-  }
-  map_mutex.unlock();
-}
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "data_show_node");
   ros::NodeHandle n;
 
-  ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
+  SimpleLidarSubscriber lidar_subscriber;
+  ros::Subscriber sub =
+      n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, &SimpleLidarSubscriber::callback, &lidar_subscriber);
   ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
 
   while (ros::ok())
@@ -90,10 +71,11 @@ int main(int argc, char** argv)
     float obstacle_x, obstacle_y;
     int cx, cy;
     int cx1, cx2, cy1, cy2;
-    for (int i = 0; i < lidar_size; i++)
+    for (size_t i = 0; i < lidar_subscriber.data().size(); i++)
     {
-      obstacle_x = lidar_distance[i] * cos(lidar_degree[i]);
-      obstacle_y = lidar_distance[i] * sin(lidar_degree[i]);
+      auto& lidar_point = lidar_subscriber.data()[i];
+      obstacle_x = lidar_point.range * cos(lidar_point.angle);
+      obstacle_y = lidar_point.range * sin(lidar_point.angle);
       cx = MAP_WIDTH / 2 + (int)(obstacle_y / MAP_RESOL);
       cy = MAP_HEIGHT / 2 + (int)(obstacle_x / MAP_RESOL);
       cx1 = cx - OBSTACLE_PADDING;

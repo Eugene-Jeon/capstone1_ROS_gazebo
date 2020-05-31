@@ -25,15 +25,7 @@
 #include "std_msgs/String.h"
 
 #include "opencv2/opencv.hpp"
-
-#define RAD2DEG(x) ((x)*180. / M_PI)
-
-boost::mutex map_mutex;
-
-int lidar_size;
-float lidar_degree[400];
-float lidar_distance[400];
-float lidar_obs;
+#include "simple_lidar_subscriber.h"
 
 int ball_number;
 float ball_X[20];
@@ -46,21 +38,6 @@ int action;
 int len;
 int n;
 
-#define RAD2DEG(x) ((x)*180. / M_PI)
-
-void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
-{
-  map_mutex.lock();
-
-  int count = scan->angle_max / scan->angle_increment;
-  lidar_size = count;
-  for (int i = 0; i < count; i++)
-  {
-    lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
-    lidar_distance[i] = scan->ranges[i];
-  }
-  map_mutex.unlock();
-}
 void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
 {
   int count = position->size;
@@ -80,7 +57,9 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "data_integation");
   ros::NodeHandle n;
 
-  ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
+  SimpleLidarSubscriber lidar_subscriber;
+  ros::Subscriber sub =
+      n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, &SimpleLidarSubscriber::callback, &lidar_subscriber);
   ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
   ros::Publisher pub_left_wheel =
       n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
