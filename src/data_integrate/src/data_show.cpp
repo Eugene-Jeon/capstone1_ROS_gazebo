@@ -130,21 +130,21 @@ void updateHoughTransformParameters(int& threshold, double& rho, double& theta_d
   if (ros::param::get("~threshold", new_threshold) && new_threshold != threshold)
   {
     threshold = new_threshold;
-    ROS_INFO("Using threshold = %d\n", threshold);
+    ROS_INFO("Using threshold = %d", threshold);
   }
 
   double new_rho;
   if (ros::param::get("~rho", new_rho) && new_rho != rho)
   {
     rho = new_rho;
-    ROS_INFO("Using rho = %f (pixels)\n", rho);
+    ROS_INFO("Using rho = %f (pixels)", rho);
   }
 
   double new_theta_degree;
   if (ros::param::get("~theta_degree", new_theta_degree) && new_theta_degree != theta_degree)
   {
     theta_degree = new_theta_degree;
-    ROS_INFO("Using theta = %f (degrees)\n", theta_degree);
+    ROS_INFO("Using theta = %f (degrees)", theta_degree);
   }
 }
 
@@ -163,8 +163,7 @@ int main(int argc, char** argv)
   int threshold = 10;
   double rho = 1.0;
   double theta_degree = 1.0;
-  ROS_INFO("Initial parameters: threshold = %d, rho = %f (pixels), theta = %f (degrees)\n", threshold, rho,
-           theta_degree);
+  ROS_INFO("Initial parameters: threshold = %d, rho = %f (pixels), theta = %f (degrees)", threshold, rho, theta_degree);
 
   while (ros::ok())
   {
