@@ -223,7 +223,7 @@ int main(int argc, char** argv)
       double x0 = a * rho, y0 = b * rho;
       cv::Point pt1(cvRound(x0 - 1000 * b), cvRound(y0 + 1000 * a));
       cv::Point pt2(cvRound(x0 + 1000 * b), cvRound(y0 - 1000 * a));
-      cv::line(map, pt1, pt2, cv::Scalar(255, 255, 0));
+      cv::line(map, pt1, pt2, cv::Scalar(0, 255, 255));
     }
 
     cv::imshow("Frame", map);
