@@ -108,7 +108,7 @@ public:
       int cy = IMAGE_HEIGHT / 2 + static_cast<int>(obstacle_x / MAP_RESOLUTION);
 
       if (imageRect.contains({ cx, cy }))
-        image_.at<int>(cx, cy) = 255;
+        image_.at<unsigned char>({ cx, cy }) = 255;
     }
 
     // Standard Hough Line Transform
