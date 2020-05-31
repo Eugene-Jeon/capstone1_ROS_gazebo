@@ -75,6 +75,38 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
   map_mutex.unlock();
 }
 
+void lidarToHoughLines(std::vector<cv::Vec2d>& lines, cv::Mat& image, int threshold)
+{
+  const int IMAGE_WIDTH = 400;
+  const int IMAGE_HEIGHT = 400;
+  const double MAP_RESOL = 0.015;
+
+  // Fill the matrix with zeros
+  image = cv::Mat::zeros(IMAGE_WIDTH, IMAGE_HEIGHT, CV_8UC1);
+
+  // Create a rect for checking points
+  const cv::Rect imageRect(cv::Point(), image.size());
+
+  // Build a binary (black-and-white) image from LIDAR data
+  int cx, cy;
+  int cx1, cx2, cy1, cy2;
+  for (int i = 0; i < lidar_size; i++)
+  {
+    float obstacle_x = lidar_distance[i] * cos(lidar_degree[i]);
+    float obstacle_y = lidar_distance[i] * sin(lidar_degree[i]);
+    int cx = IMAGE_WIDTH / 2 + static_cast<int>(obstacle_y / MAP_RESOL);
+    int cy = IMAGE_HEIGHT / 2 + static_cast<int>(obstacle_x / MAP_RESOL);
+
+    if (imageRect.contains({ cx, cy }))
+    {
+      image.at<int>(cx, cy) = 255;
+    }
+  }
+
+  // Standard Hough Line Transform
+  cv::HoughLines(image, lines, 4, 4 * CV_PI / 180, threshold, 0, 0);
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "data_show_node");
@@ -82,6 +114,12 @@ int main(int argc, char** argv)
 
   ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
   ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
+
+  std::vector<cv::Vec2d> lines;
+  cv::Mat lidarImage;
+
+  int houghThreshold = n.param("/data_show_node/hough_threshold", 7);
+  ROS_INFO("Using threshold = %d...\n", houghThreshold);
 
   while (ros::ok())
   {
@@ -124,6 +162,20 @@ int main(int argc, char** argv)
     }
     // Drawing ROBOT
     cv::circle(map, cv::Point(MAP_WIDTH / 2, MAP_HEIGHT / 2), 3, cv::Scalar(255, 0, 0), -1);
+
+    // Find lines using Hough Transform
+    lidarToHoughLines(lines, lidarImage, houghThreshold);
+    // Draw the lines found with Hough Transform
+    for (size_t i = 0; i < lines.size(); i++)
+    {
+      auto rho = lines[i][0];
+      auto theta = lines[i][1];
+      double a = cos(theta), b = sin(theta);
+      double x0 = a * rho, y0 = b * rho;
+      cv::Point pt1(cvRound(x0 - 1000 * b), cvRound(y0 + 1000 * a));
+      cv::Point pt2(cvRound(x0 + 1000 * b), cvRound(y0 - 1000 * a));
+      cv::line(map, pt1, pt2, cv::Scalar(255, 255, 0));
+    }
 
     cv::imshow("Frame", map);
     cv::waitKey(50);
