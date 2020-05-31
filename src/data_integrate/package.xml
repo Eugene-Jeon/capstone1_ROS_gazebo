@@ -24,6 +24,7 @@
   <depend>geometry_msgs</depend>
   <depend>image_transport</depend>
   <depend>core_msgs</depend>
+  <depend>angles</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
